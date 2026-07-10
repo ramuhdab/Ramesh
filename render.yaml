@@ -66,7 +66,8 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    plan: free
+    # No `plan:` here - static sites don't take one (they're always served
+    # free off Render's CDN, with no configurable instance size).
     envVars:
       # See the CORS_ORIGIN comment above - same idea, in reverse: enter
       # https://<your-backend-name>.onrender.com/api/v1 when prompted. This
