@@ -8,7 +8,7 @@ import { AppError } from "../../middleware/errorHandler";
 
 export async function createVendor(organizationId: string, input: { name: string; documents?: Record<string, unknown> }, actorUserId?: string | null) {
   const vendor = await prisma.vendor.create({
-    data: { organizationId, name: input.name, documents: input.documents, status: "pending" },
+    data: { organizationId, name: input.name, documents: input.documents as any, status: "pending" },
   });
   eventBus.publish({ type: "vendor.created", organizationId, actorUserId, payload: { id: vendor.id, name: vendor.name } });
   return vendor;

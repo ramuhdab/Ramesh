@@ -64,7 +64,7 @@ userRouter.patch(
     const orgId = requireOrg(req);
     const user = await userService.updateUser(orgId, req.params.id, {
       ...data,
-      lockedUntil: data.lockedUntil ? new Date(data.lockedUntil) : data.lockedUntil,
+      lockedUntil: data.lockedUntil != null ? new Date(data.lockedUntil) : data.lockedUntil,
     });
     res.json({ data: user });
   })

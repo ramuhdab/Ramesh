@@ -34,7 +34,7 @@ export async function createOrganization(input: {
     data: {
       name: input.name,
       subscriptionPlan: input.subscriptionPlan ?? "standard",
-      contactInfo: input.contactInfo,
+      contactInfo: input.contactInfo as any,
       status: "pending",
       activationTokenHash: hash,
       activationTokenExpiresAt: activationExpiresAt,
@@ -114,7 +114,7 @@ export async function getOrganization(id: string) {
 
 export async function updateOrganization(id: string, data: Partial<{ subscriptionPlan: string; status: string; logoUrl: string; contactInfo: Record<string, unknown>; businessHours: Record<string, unknown> }>) {
   await getOrganization(id);
-  return prisma.organization.update({ where: { id }, data });
+  return prisma.organization.update({ where: { id }, data: data as any });
 }
 
 /**

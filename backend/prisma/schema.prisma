@@ -357,6 +357,7 @@ model Vendor {
   status           String @default("pending") // pending|verified|approved
   performanceScore Decimal? @db.Decimal(5, 2) @map("performance_score")
   isActive         Boolean @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   ratings        VendorRating[]
   purchaseOrders PurchaseOrder[]
