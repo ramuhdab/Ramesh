@@ -21,12 +21,16 @@ services:
     dockerContext: ./backend
     plan: free
     healthCheckPath: /health
-    preDeployCommand: npx prisma migrate deploy
-    # Runs once, after the very first successful deploy only - seeds the
-    # platform permission catalog and the Sparquer Super Admin login. Its
-    # one-time output (the generated Super Admin temp password) only ever
+    # `preDeployCommand`/`initialDeployHook` are paid-plan-only on Render (they
+    # error with "not supported for free tier services"), so on the free plan
+    # migrations and seeding instead run as part of the container's start
+    # command, every deploy. Both are idempotent and safe to repeat: `prisma
+    # migrate deploy` only applies migrations it hasn't applied yet, and
+    # prisma/seed.ts upserts the permission catalog and skips creating the
+    # Super Admin if one already exists. The seed script's one-time output
+    # (the generated Super Admin temp password, on the very first deploy only)
     # appears in this service's Logs tab - see deployment/08-Deployment-Render.md Step 4.
-    initialDeployHook: npm run prisma:seed
+    dockerCommand: sh -c "npx prisma migrate deploy && npm run prisma:seed && node dist/server.js"
     envVars:
       - key: NODE_ENV
         value: production
