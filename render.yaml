@@ -9,7 +9,6 @@
 
 databases:
   - name: spqr-inventory-db
-    plan: free
     databaseName: spqr_inventory
     user: spqr
 
@@ -18,7 +17,6 @@ services:
     name: spqr-inventory-backend
     runtime: node
     rootDir: backend
-    plan: free
     healthCheckPath: /health
     # No Docker - Render builds and runs this directly with its own Node
     # runtime. `buildCommand`/`startCommand` are relative to `rootDir` above,
