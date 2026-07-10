@@ -42,6 +42,23 @@ async function main() {
       },
     });
     console.log(`Super Admin created. TEMP PASSWORD: ${superAdminPassword} (change immediately - set SEED_SUPER_ADMIN_PASSWORD for real deployments).`);
+  } else if (process.env.SEED_SUPER_ADMIN_PASSWORD) {
+    // Self-service password reset with no direct DB access required: set
+    // SEED_SUPER_ADMIN_PASSWORD to a new value and restart the service. This
+    // only resets the password when the env var is explicitly provided, so
+    // a normal redeploy (var unset) never silently touches an existing
+    // account - see deployment/08-Deployment-Render.md for how to do this
+    // from the Render Dashboard alone (no psql/SQL client needed).
+    await prisma.superAdmin.update({
+      where: { id: existing.id },
+      data: {
+        passwordHash: await bcrypt.hash(superAdminPassword, 12),
+        mustChangePassword: true,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
+    });
+    console.log(`Super Admin "${superAdminUsername}" password reset from SEED_SUPER_ADMIN_PASSWORD.`);
   } else {
     console.log("Super Administrator already exists, skipping.");
   }
