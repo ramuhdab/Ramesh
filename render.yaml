@@ -1,0 +1,70 @@
+# Render Blueprint - free-tier deployment for testing (see
+# deployment/08-Deployment-Render.md for the full step-by-step guide).
+#
+# Rename the two `name:` values below to something globally unique on Render
+# (service names share a single *.onrender.com namespace across all Render
+# users) before deploying, then follow deployment/08-Deployment-Render.md
+# starting at Step 1 - it explains the two `sync: false` values below and
+# exactly what to enter for them during the Blueprint creation wizard.
+
+databases:
+  - name: spqr-inventory-db
+    plan: free
+    databaseName: spqr_inventory
+    user: spqr
+
+services:
+  - type: web
+    name: spqr-inventory-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    preDeployCommand: npx prisma migrate deploy
+    # Runs once, after the very first successful deploy only - seeds the
+    # platform permission catalog and the Sparquer Super Admin login. Its
+    # one-time output (the generated Super Admin temp password) only ever
+    # appears in this service's Logs tab - see deployment/08-Deployment-Render.md Step 4.
+    initialDeployHook: npm run prisma:seed
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: spqr-inventory-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: MAIL_PROVIDER
+        value: console
+      - key: STORAGE_PROVIDER
+        value: local
+      # `sync: false` means Render prompts you for this value during Blueprint
+      # creation, rather than baking a value into this file. Since the
+      # frontend service's name (below) determines its URL deterministically
+      # (https://<name>.onrender.com), you already know the right value to
+      # enter *before* either service has actually been deployed - see
+      # deployment/08-Deployment-Render.md Steps 1-2.
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: spqr-inventory-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    plan: free
+    envVars:
+      # See the CORS_ORIGIN comment above - same idea, in reverse: enter
+      # https://<your-backend-name>.onrender.com/api/v1 when prompted. This
+      # is baked into the static build, so changing it later needs a redeploy.
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

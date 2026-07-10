@@ -1,0 +1,17 @@
+{
+  "name": "spqr-inventory-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright end-to-end tests for SPQR Inventory Management (API + UI).",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test tests/api",
+    "test:ui": "playwright test tests/ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.0",
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3"
+  }
+}
