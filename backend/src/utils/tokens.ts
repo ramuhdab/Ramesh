@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import crypto from "crypto";
 import { env } from "../config/env";
 
@@ -11,7 +11,13 @@ export type AccessTokenPayload = {
 };
 
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn });
+  // @types/jsonwebtoken types `expiresIn` as `number | StringValue` (a
+  // template-literal type like "15m"/"7d" from the `ms` package), not a
+  // plain `string` - but env.jwtAccessExpiresIn is necessarily a generic
+  // `string` since it comes from process.env. The runtime value is valid
+  // (jwt.sign parses it with the same `ms` library), so this cast just
+  // tells TS what we already know at runtime.
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtAccessExpiresIn as SignOptions["expiresIn"] });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
@@ -19,7 +25,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({ sub: userId }, env.jwtRefreshSecret, { expiresIn: env.jwtRefreshExpiresIn });
+  return jwt.sign({ sub: userId }, env.jwtRefreshSecret, { expiresIn: env.jwtRefreshExpiresIn as SignOptions["expiresIn"] });
 }
 
 export function verifyRefreshToken(token: string): { sub: string } {
