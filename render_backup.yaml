@@ -16,27 +16,22 @@ databases:
 services:
   - type: web
     name: spqr-inventory-backend
-    runtime: node
-    rootDir: backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
     healthCheckPath: /health
-    # No Docker - Render builds and runs this directly with its own Node
-    # runtime. `buildCommand`/`startCommand` are relative to `rootDir` above,
-    # so these are the same commands you'd run by hand from inside backend/.
-    buildCommand: npm install && npx prisma generate && npm run build
     # `preDeployCommand`/`initialDeployHook` are paid-plan-only on Render (they
     # error with "not supported for free tier services"), so on the free plan
-    # migrations and seeding instead run as part of the start command, every
-    # deploy. Both are idempotent and safe to repeat: `prisma migrate deploy`
-    # only applies migrations it hasn't applied yet, and prisma/seed.ts
-    # upserts the permission catalog and skips creating the Super Admin if
-    # one already exists. The seed script's one-time output (the generated
-    # Super Admin temp password, on the very first deploy only) appears in
-    # this service's Logs tab - see deployment/08-Deployment-Render.md Step 4.
-    startCommand: sh -c "npx prisma migrate deploy && npm run prisma:seed && node dist/server.js"
+    # migrations and seeding instead run as part of the container's start
+    # command, every deploy. Both are idempotent and safe to repeat: `prisma
+    # migrate deploy` only applies migrations it hasn't applied yet, and
+    # prisma/seed.ts upserts the permission catalog and skips creating the
+    # Super Admin if one already exists. The seed script's one-time output
+    # (the generated Super Admin temp password, on the very first deploy only)
+    # appears in this service's Logs tab - see deployment/08-Deployment-Render.md Step 4.
+    dockerCommand: sh -c "npx prisma migrate deploy && npm run prisma:seed && node dist/server.js"
     envVars:
-      - key: NODE_VERSION
-        value: 20.18.1
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL

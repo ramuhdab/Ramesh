@@ -9,7 +9,7 @@ This is a companion to 06-Deployment-AWS.md and 07-Deployment-Azure.md, for a di
 
 | Component | Render free tier | The catch |
 |---|---|---|
-| Backend (Node/Express, built natively - no Docker) | Free Web Service, 750 shared instance-hours/month across your account | Spins down after 15 minutes idle - the first request after that takes ~30-60s to "wake up." Fine for testing, not for a demo where first impressions matter. |
+| Backend (Node/Express, Docker) | Free Web Service, 750 shared instance-hours/month across your account | Spins down after 15 minutes idle - the first request after that takes ~30-60s to "wake up." Fine for testing, not for a demo where first impressions matter. |
 | Frontend (React static build) | Free Static Site | No spin-down, no cold start - static files are served directly. |
 | Database (PostgreSQL) | Free Postgres, 1GB storage | **Expires 30 days after creation**, then a 14-day grace period, then Render deletes it. You must recreate it (and re-run migrations/seed) roughly monthly for an ongoing test deployment - see Section 4. |
 | File storage (Attachments, WF30) | Local disk inside the web service container | Free tier has **no persistent disk** - uploaded files are lost on every redeploy/restart/spin-down-wake-cycle. Acceptable for testing the workflow, not for anyone to rely on an uploaded file surviving. |
@@ -20,7 +20,7 @@ If none of this is acceptable once real users depend on it, that's exactly the p
 ## 2. Prerequisites
 - A Render account (render.com - free signup, no credit card required for the free tier).
 - This repository pushed to a GitHub repo Render can access (see the root README for pushing it there if you haven't yet).
-- Nothing else - no CLI to install, no Docker to install, no cloud credentials to configure. Render builds the backend and frontend directly from your GitHub repo using its own Node runtime (the `backend/Dockerfile` in this repo is used only for the docker-compose local-dev setup and the AWS/Azure guides - Render itself never touches it).
+- Nothing else - no CLI to install, no cloud credentials to configure. Render builds directly from your GitHub repo.
 
 ## 3. Step-by-Step Setup
 
@@ -35,8 +35,8 @@ Whatever you choose becomes part of your public URLs, deterministically, before 
 3. Render prompts you for the two environment variables marked `sync: false` in `render.yaml` - enter them now, using the URLs from Step 1:
    - `CORS_ORIGIN` (on the backend) -> `https://<your-frontend-name>.onrender.com` (no trailing slash)
    - `VITE_API_BASE_URL` (on the frontend) -> `https://<your-backend-name>.onrender.com/api/v1`
-4. Confirm. Render creates the database first, then builds and deploys both services - no Docker involved for either one. The backend build runs `npm install && npx prisma generate && npm run build` directly against Render's own Node runtime (version pinned via the `NODE_VERSION` env var in `render.yaml`, matching what this app was built/tested against); the frontend build runs `npm install && npm run build` in `frontend/`. First build typically takes a few minutes for the backend (TypeScript + Prisma generate) and under a minute for the frontend (static).
-5. Nothing manual to run afterward: the backend's `startCommand` (`npx prisma migrate deploy && npm run prisma:seed && node dist/server.js`) applies the database schema and seeds the platform permission catalog and the Sparquer Super Admin login every time the process starts, before the server itself starts listening. (Render's `preDeployCommand`/`initialDeployHook` Blueprint fields would normally do this instead, but both are paid-plan-only - they error with "not supported for free tier services" - so this deployment folds the same two steps into the start command. Both are idempotent, so repeating them on every deploy is harmless: migrations only apply once, and the seed script skips creating the Super Admin if one already exists.)
+4. Confirm. Render creates the database first, then builds and deploys both services. The backend build runs `backend/Dockerfile`; the frontend build runs `npm install && npm run build` in `frontend/`. First build typically takes a few minutes for the backend (TypeScript + Prisma generate) and under a minute for the frontend (static).
+5. Nothing manual to run afterward: the backend's `dockerCommand` (`npx prisma migrate deploy && npm run prisma:seed && node dist/server.js`) applies the database schema and seeds the platform permission catalog and the Sparquer Super Admin login every time the container starts, before the server itself starts listening. (Render's `preDeployCommand`/`initialDeployHook` Blueprint fields would normally do this instead, but both are paid-plan-only - they error with "not supported for free tier services" - so this deployment folds the same two steps into the start command. Both are idempotent, so repeating them on every deploy is harmless: migrations only apply once, and the seed script skips creating the Super Admin if one already exists.)
 
 **If Render tells you a name is taken:** it'll assign a different actual URL (or refuse and ask you to pick again, depending on the conflict). Either way, once you know the real, final URLs for both services, revisit Step 2.3's two values in Dashboard -> each service -> **Environment**, correct them if needed, and both services will redeploy automatically.
 
@@ -61,7 +61,7 @@ Everyone testing from India (or anywhere else) just needs the frontend URL plus 
 - **Attachments:** treat anything uploaded through the Attachments feature as temporary for the life of this deployment - it will not survive a redeploy.
 
 ## 5. Why This Isn't the Production Deployment
-This entire guide exists because Render's free tier removes every piece of setup effort (no AWS/Azure account, no Lightsail/App Service, no IAM, no DNS) at the direct cost of: expiring/ephemeral storage, cold starts, and no real backup/retention (FR-31/WF27 is not satisfiable at all on the free tier - there is no automated backup of a database that itself expires in 30 days). Once this is genuinely serving customers rather than testers, move to 06-Deployment-AWS.md or 07-Deployment-Azure.md, both of which build and run the same backend from `backend/Dockerfile` (unused by this Render deployment, but present in the repo for exactly this purpose) against the same `DATABASE_URL`-based Prisma connection - nothing about the application code changes, only the infrastructure it points at (per 02-Architecture.md's cloud-agnostic design).
+This entire guide exists because Render's free tier removes every piece of setup effort (no AWS/Azure account, no Lightsail/App Service, no IAM, no DNS) at the direct cost of: expiring/ephemeral storage, cold starts, and no real backup/retention (FR-31/WF27 is not satisfiable at all on the free tier - there is no automated backup of a database that itself expires in 30 days). Once this is genuinely serving customers rather than testers, move the same Docker images and the same `DATABASE_URL`-based Prisma connection to 06-Deployment-AWS.md or 07-Deployment-Azure.md - nothing about the application code changes, only the infrastructure it points at (per 02-Architecture.md's cloud-agnostic design).
 
 ---
 *Companion documents: 06-Deployment-AWS.md, 07-Deployment-Azure.md (production-grade equivalents).*
