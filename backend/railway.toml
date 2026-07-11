@@ -33,7 +33,10 @@ startCommand = "node dist/server.js"
 # Both commands are idempotent: `db push` just re-confirms an already-matching
 # schema, and prisma/seed.ts skips creating the Super Admin if one already
 # exists (see prisma/seed.ts for the SEED_SUPER_ADMIN_PASSWORD reset path).
-preDeployCommand = ["npx prisma db push --accept-data-loss --skip-generate", "npm run prisma:seed"]
+# Railway's `preDeployCommand` array accepts at most one element - unlike
+# Render's shell-wrapped startCommand, this can't just be `&&`-chained into
+# multiple array entries, so both steps are chained inside one shell command.
+preDeployCommand = ["sh -c \"npx prisma db push --accept-data-loss --skip-generate && npm run prisma:seed\""]
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
