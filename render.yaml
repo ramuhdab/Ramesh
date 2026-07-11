@@ -65,6 +65,15 @@ services:
         value: console
       - key: STORAGE_PROVIDER
         value: local
+      # Without this, prisma/seed.ts falls back to a fixed, publicly-known
+      # default password ("ChangeMe!2026") for the Sparquer Super Admin -
+      # fine for a first deploy (the app forces a password change on first
+      # login), but anyone who reads this file could log in first. Set your
+      # own value here instead. Only takes effect when the super_admins
+      # table is empty (fresh DB, or after deleting the existing row) -
+      # prisma/seed.ts skips creating one if it already exists.
+      - key: SEED_SUPER_ADMIN_PASSWORD
+        sync: false
       # `sync: false` means Render prompts you for this value during Blueprint
       # creation, rather than baking a value into this file. Since the
       # frontend service's name (below) determines its URL deterministically

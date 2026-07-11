@@ -14,7 +14,14 @@ services:
       - spqr_db_data:/var/lib/postgresql/data
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      # Named Dockerfile.compose (not the default `Dockerfile`) so Render's
+      # and Railway's native-runtime builders don't auto-detect and silently
+      # use it instead of the buildCommand/startCommand each platform's
+      # config actually declares - see deployment/08-Deployment-Render.md
+      # and deployment/09-Deployment-Railway.md.
+      dockerfile: Dockerfile.compose
     restart: unless-stopped
     depends_on:
       - db
@@ -39,7 +46,9 @@ services:
       - spqr_uploads:/app/uploads
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.compose
     restart: unless-stopped
     depends_on:
       - backend
