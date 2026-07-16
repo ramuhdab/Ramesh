@@ -1,0 +1,39 @@
+FROM node:20-slim AS base
+WORKDIR /app
+
+# node:20-slim strips out the openssl CLI package that Prisma's engine uses
+# to detect the runtime's libssl/OpenSSL version - without it, Prisma warns
+# "failed to detect the libssl/openssl version" and guesses, which can pick
+# the wrong prebuilt query engine. Installing it explicitly avoids relying
+# on that guess (belt-and-suspenders with the explicit `binaryTargets` in
+# schema.prisma, which covers this from the other direction).
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json* ./
+RUN npm install --production=false
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# node:20-slim (Debian) rather than node:20-alpine: Prisma's query engine
+# needs OpenSSL, and Alpine's musl-based OpenSSL has a long history of
+# incompatibility with Prisma's prebuilt engine binaries (the engine fails to
+# parse its own response at runtime). Debian's glibc/OpenSSL is what Prisma
+# actually tests against.
+FROM node:20-slim
+WORKDIR /app
+ENV NODE_ENV=production
+# This is a separate image from the `base` stage above, so it needs its own
+# openssl install too - see the comment on the matching line in that stage.
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+COPY --from=base /app/node_modules ./node_modules
+COPY --from=base /app/dist ./dist
+COPY --from=base /app/prisma ./prisma
+COPY package.json ./
+
+EXPOSE 4000
+CMD ["node", "dist/server.js"]

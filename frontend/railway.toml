@@ -1,0 +1,37 @@
+# Railway config-as-code for the frontend service - see
+# deployment/09-Deployment-Railway.md for the full step-by-step guide.
+#
+# IMPORTANT: this repo's Dockerfile is named `Dockerfile.compose`, not
+# `Dockerfile` - see the equivalent note in backend/railway.toml. Same
+# applies here: don't rename anything back to a plain `Dockerfile` inside
+# frontend/ while deploying this service on Railway.
+#
+# Unlike Render, Railway has no CDN-style "static site" hosting tier - every
+# service is a running process. So this service runs a tiny static file
+# server (the `serve` package, added as a real dependency in package.json)
+# over the Vite build output, instead of Render's free static-site hosting.
+# That means, unlike on Render, this frontend also consumes Railway's
+# usage-based billing the same as the backend does.
+#
+# When creating this service, set its "Root Directory" to `frontend` in
+# Settings, AND separately set its "Config-as-code Path" to
+# `frontend/railway.toml` (Root Directory does not make Railway look for the
+# config file inside that folder automatically).
+"$schema" = "https://railway.com/railway.schema.json"
+
+[build]
+builder = "RAILPACK"
+# `--include=dev` because vite and typescript (needed for the build) are
+# devDependencies - see the same note in backend/railway.toml.
+buildCommand = "npm install --include=dev && npm run build"
+
+[deploy]
+# `serve -s dist -l $PORT` (defined as the "start" script in package.json)
+# serves the built SPA as static files, with `-s` enabling the SPA fallback
+# (any unknown path serves index.html, same as Render's routes/rewrite
+# config did). `$PORT` is Railway's injected port - required, since Railway
+# routes traffic to whatever port it tells the container to listen on, not
+# a fixed one.
+startCommand = "npm run start"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
